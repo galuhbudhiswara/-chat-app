@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 
 class ChatMessages extends StatelessWidget {
@@ -5,8 +7,38 @@ class ChatMessages extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Text('No messages found.'),
+    return StreamBuilder(
+      stream: FirebaseFirestore.instance
+          .collection('Chat')
+          .orderBy(
+            'createdAt',
+            descending: false,
+          )
+          .snapshots(),
+      builder: (context, chatSnapshot) {
+        if (chatSnapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (!chatSnapshot.hasData || chatSnapshot.data!.docs.isEmpty) {
+          return const Center(
+            child: Text('No messages found.'),
+          );
+        }
+        if (chatSnapshot.hasError) {
+          return const Center(
+            child: Text('Something went wrong.'),
+          );
+        }
+
+        final loadedMessages = chatSnapshot.data!.docs;
+
+        return ListView.builder(
+          itemCount: loadedMessages.length,
+          itemBuilder: (context, index) =>
+              Text(loadedMessages[index].data()['text']),
+        );
+      },
     );
   }
 }
